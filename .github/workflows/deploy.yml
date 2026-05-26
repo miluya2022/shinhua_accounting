@@ -1,0 +1,32 @@
+name: 🚀 自動建置與部署 GitHub Pages
+
+on:
+  push:
+    branches:
+      - main  # 或是您目前的預設分支 (例如 master)
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-deploy:
+    concurrency: ci-${{ github.ref }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🛎️ 取得程式碼
+        uses: actions/checkout@v4
+
+      - name: 🟢 設定 Node.js 環境
+        uses: actions/setup-node@v4
+        with:
+          node-size: 20
+
+      - name: 🔧 安裝相依套件與打包專案
+        run: |
+          npm ci
+          npm run build
+
+      - name: 🚀 部署至 GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: dist  # 將 Vite 打包生成的 dist 資料夾內容發佈到 gh-pages 分支
