@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>新化收支會計財務系統 (Supabase 版)</title>
+  <script type="module" crossorigin src="./assets/index-C8HBznJK.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-eGW8OSHD.css">
+</head>
+<body>
+
+  <!-- ==========================================
+       ▼▼▼ 載入中動畫遮罩 (Loader Overlay) ▼▼▼
+       ========================================== -->
+  <div id="loader">
+    <div class="spinner"></div>
+    <div class="loader-text">安全連線至資料庫中，請稍候...</div>
+  </div>
+
+  <!-- ==========================================
+       ▼▼▼ 快顯通知系統 (Toast Notifications) ▼▼▼
+       ========================================== -->
+  <div id="toast">
+    <span class="toast-icon">✨</span>
+    <span class="toast-text">通知訊息</span>
+  </div>
+
+  <!-- ==========================================
+       ▼▼▼ 資料庫未設定遮罩 (Supabase Config Overlay) ▼▼▼
+       ========================================== -->
+  <div id="config-screen" class="auth-wrapper" style="display: none;">
+    <div class="auth-card">
+      <div class="auth-header">
+        <div class="auth-logo">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+          </svg>
+        </div>
+        <h2 class="auth-title">初始化資料庫設定</h2>
+        <p class="auth-subtitle">偵測到尚未設定 Supabase 金鑰，請輸入以完成連線：</p>
+      </div>
+      <form id="config-form" class="auth-form" onsubmit="event.preventDefault();">
+        <div class="auth-group">
+          <label for="config-url">Supabase Project URL</label>
+          <div class="auth-input-wrapper">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+            <input type="url" id="config-url" class="auth-input" placeholder="https://xxxx.supabase.co" required>
+          </div>
+        </div>
+        <div class="auth-group">
+          <label for="config-key">Supabase Anon Key</label>
+          <div class="auth-input-wrapper">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+            <input type="text" id="config-key" class="auth-input" placeholder="eyJhbGciOi..." required>
+          </div>
+        </div>
+        <button type="submit" class="btn-primary">
+          💾 儲存設定並初始化連線
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       ▼▼▼ 帳密驗證登入遮罩 (Auth Screen Overlay) ▼▼▼
+       ========================================== -->
+  <div id="auth-screen" class="auth-wrapper" style="display: none;">
+    <div class="auth-card">
+      <div class="auth-header">
+        <div class="auth-logo">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+          </svg>
+        </div>
+        <h2 id="auth-title" class="auth-title">登入系統</h2>
+        <p id="auth-subtitle" class="auth-subtitle">請輸入您的電子郵件與密碼登入財務管理系統</p>
+      </div>
+
+      <!-- 登入與註冊表單 -->
+      <form id="auth-form" class="auth-form" onsubmit="event.preventDefault();">
+        <div class="auth-group">
+          <label for="auth-email">電子信箱 (Email)</label>
+          <div class="auth-input-wrapper">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207"/></svg>
+            <input type="email" id="auth-email" class="auth-input" placeholder="yourname@example.com" required autocomplete="email">
+          </div>
+        </div>
+        <div class="auth-group">
+          <label for="auth-password">密碼 (Password)</label>
+          <div class="auth-input-wrapper">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+            <input type="password" id="auth-password" class="auth-input" placeholder="🔒 至少 6 位數密碼" required autocomplete="current-password">
+          </div>
+        </div>
+        <button type="submit" id="btn-auth-submit" class="btn-primary">
+          🔑 安全登入
+        </button>
+      </form>
+
+      <div class="auth-footer">
+        <span id="auth-toggle-msg">尚未擁有帳號嗎？</span>
+        <span id="auth-toggle-link" class="auth-link">立即註冊</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       ▼▼▼ 左側主選單導覽列 (Sidebar Navigation) ▼▼▼
+       ========================================== -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-icon">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H3a2 2 0 01-2-2V5a2 2 0 012-2h18a2 2 0 012 2v14a2 2 0 01-2 2z"/>
+        </svg>
+      </div>
+      <div class="brand-name">新化收支財務系統</div>
+    </div>
+
+    <!-- 導覽按鈕選單 -->
+    <ul class="menu-list">
+      <li class="menu-item active" data-target="panel-dashboard">
+        <button>
+          📊 儀表板看板
+        </button>
+      </li>
+      <li class="menu-item" data-target="panel-transactions">
+        <button>
+          📝 收支流水帳
+        </button>
+      </li>
+      <li class="menu-item" data-target="panel-projects">
+        <button>
+          📁 計畫專案管理
+        </button>
+      </li>
+      <li class="menu-item" data-target="panel-payees">
+        <button>
+          👥 所得人管理
+        </button>
+      </li>
+      <li class="menu-item" data-target="panel-settings">
+        <button>
+          ⚙️ 系統設定
+        </button>
+      </li>
+    </ul>
+
+    <!-- 底部登入使用者資訊 -->
+    <div class="user-profile">
+      <div class="user-avatar" id="user-avatar-initial">U</div>
+      <div class="user-info">
+        <div class="user-name" id="user-email-display">user@example.com</div>
+      </div>
+      <button class="btn-signout" id="btn-logout" title="安全登出系統">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+        </svg>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ==========================================
+       ▼▼▼ 右側主顯示區域 (Main Content Area) ▼▼▼
+       ========================================== -->
+  <main class="main-content">
+
+    <!-- 行動裝置上邊欄漢堡選單按鈕 -->
+    <div style="display: flex; align-items: center; gap: 1rem; width: 100%; border-bottom: 1px solid var(--card-border); padding-bottom: 1rem; margin-bottom: -1rem; display: none;" class="hamburger">
+      <button id="sidebar-toggle" class="hamburger">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+      <div style="font-weight: 700; font-size: 1.15rem; background: linear-gradient(90deg, #4f46e5, #0d9488); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">新化收支財務系統</div>
+    </div>
+
+    <!-- ==========================================
+         ▼▼▼ 1. 儀表板視圖 (Dashboard Panel) ▼▼▼
+         ========================================== -->
+    <section id="panel-dashboard" class="content-panel active">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">儀表板看板</h1>
+          <p class="page-subtitle">財務收支統計與近期交易即時摘要</p>
+        </div>
+      </div>
+
+      <!-- 三大統計指標 -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon primary">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M12 16v1m-4-6h8"/></svg>
+          </div>
+          <div class="stat-details">
+            <span class="stat-label">系統總支出金額</span>
+            <span class="stat-value" id="dash-total-spending">$0</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon success">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2z"/></svg>
+          </div>
+          <div class="stat-details">
+            <span class="stat-label">活躍計畫專案</span>
+            <span class="stat-value" id="dash-total-projects">0</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon warning">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          </div>
+          <div class="stat-details">
+            <span class="stat-label">已建檔所得人</span>
+            <span class="stat-value" id="dash-total-payees">0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 雙欄儀表板 -->
+      <div class="dashboard-grid">
+        <!-- 左欄：近期收支紀錄 -->
+        <div class="premium-card">
+          <div class="card-header">
+            <h3 class="card-title">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              近期收支交易
+            </h3>
+          </div>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>日期</th>
+                  <th>計畫編號</th>
+                  <th>科目</th>
+                  <th>事由</th>
+                  <th>支領人</th>
+                  <th class="num-col">小計</th>
+                </tr>
+              </thead>
+              <tbody id="dash-recent-tbody">
+                <!-- 動態載入近期交易 -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 右欄：科目支出比例 -->
+        <div class="premium-card">
+          <div class="card-header">
+            <h3 class="card-title">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.003 9.003 0 1020.945 13H11V3.055z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"/></svg>
+              科目支出占比
+            </h3>
+          </div>
+          <div class="subject-analytics-list" id="dash-subject-list">
+            <!-- 動態載入占比 -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         ▼▼▼ 2. 收支流水帳視圖 (Transactions Panel) ▼▼▼
+         ========================================== -->
+    <section id="panel-transactions" class="content-panel">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">收支流水帳</h1>
+          <p class="page-subtitle">記載完整的財務收支交易清單與進階查詢</p>
+        </div>
+        <button class="btn-primary" id="btn-add-transaction">
+          ➕ 新增收支明細
+        </button>
+      </div>
+
+      <!-- 篩選列 -->
+      <div class="premium-card">
+        <div class="controls-row">
+          <div class="control-field">
+            <label for="filter-tx-project">計畫專案</label>
+            <select id="filter-tx-project" class="control-input">
+              <option value="">-- 全部計畫 --</option>
+            </select>
+          </div>
+          <div class="control-field">
+            <label for="filter-tx-payee">支領所得人</label>
+            <select id="filter-tx-payee" class="control-input">
+              <option value="">-- 全部所得人 --</option>
+            </select>
+          </div>
+          <div class="control-field">
+            <label for="filter-tx-tax">扣免繳狀態</label>
+            <select id="filter-tx-tax" class="control-input">
+              <option value="">-- 全部交易 --</option>
+              <option value="true">僅顯示扣免繳</option>
+              <option value="false">排除扣免繳</option>
+            </select>
+          </div>
+          <div class="control-field" style="flex: 1.5;">
+            <label for="filter-tx-search">事由與科目搜尋</label>
+            <input type="text" id="filter-tx-search" class="control-input" placeholder="鍵入事由或科目關鍵字...">
+          </div>
+          <div class="control-field action-btn">
+            <button class="btn-secondary" id="btn-tx-reset">
+              🔄 重設篩選
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 流水帳表格 -->
+      <div class="premium-card" style="padding: 0; overflow: hidden;">
+        <div class="table-wrapper">
+          <table id="table-transactions">
+            <thead>
+              <tr>
+                <th>支領人</th>
+                <th>計畫編號</th>
+                <th>社大科目</th>
+                <th>事由</th>
+                <th>日期</th>
+                <th>憑單編號</th>
+                <th>憑證編號</th>
+                <th class="num-col">小計</th>
+                <th style="width: 100px; text-align: center;">狀態標記</th>
+                <th style="text-align: right; width: 100px;">操作</th>
+              </tr>
+            </thead>
+            <tbody id="tx-tbody">
+              <!-- 動態載入流水帳 -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         ▼▼▼ 3. 計畫專案管理視圖 (Projects Panel) ▼▼▼
+         ========================================== -->
+    <section id="panel-projects" class="content-panel">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">計畫專案管理</h1>
+          <p class="page-subtitle">管理所有活躍與歷史的專案計畫代碼與名稱</p>
+        </div>
+        <button class="btn-primary" id="btn-add-project">
+          ➕ 新增計畫專案
+        </button>
+      </div>
+
+      <!-- 計畫列表 -->
+      <div class="premium-card" style="padding: 0; overflow: hidden;">
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 20%">計畫編號 (代碼)</th>
+                <th style="width: 50%">計畫名稱</th>
+                <th style="width: 20%">建立時間</th>
+                <th style="text-align: right; width: 10%">操作</th>
+              </tr>
+            </thead>
+            <tbody id="project-tbody">
+              <!-- 動態載入計畫 -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         ▼▼▼ 4. 所得人管理視圖 (Payees Panel) ▼▼▼
+         ========================================== -->
+    <section id="panel-payees" class="content-panel">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">所得人清冊管理</h1>
+          <p class="page-subtitle">維護外部所得人、講師及工作人員的稅務核銷與連絡資訊</p>
+        </div>
+        <button class="btn-primary" id="btn-add-payee">
+          ➕ 新增所得人資料
+        </button>
+      </div>
+
+      <!-- 所得人列表 -->
+      <div class="premium-card" style="padding: 0; overflow: hidden;">
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>姓名</th>
+                <th>身分證字號</th>
+                <th>服務單位 / 職稱</th>
+                <th>連絡電話</th>
+                <th>戶籍地址</th>
+                <th style="text-align: right; width: 100px;">操作</th>
+              </tr>
+            </thead>
+            <tbody id="payee-tbody">
+              <!-- 動態載入所得人 -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         ▼▼▼ 5. 系統設定視圖 (Settings Panel) ▼▼▼
+         ========================================== -->
+    <section id="panel-settings" class="content-panel">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">系統設定</h1>
+          <p class="page-subtitle">配置與重設與 Supabase 後端資料庫連線的敏感金鑰資訊</p>
+        </div>
+      </div>
+
+      <!-- 設定表單 -->
+      <div class="stats-grid" style="grid-template-columns: 1fr;">
+        <div class="premium-card">
+          <div class="card-header">
+            <h3 class="card-title">📂 資料庫連線配置</h3>
+          </div>
+          <form id="settings-db-form" class="auth-form" onsubmit="event.preventDefault();" style="max-width: 600px;">
+            <div class="auth-group">
+              <label for="settings-url">Supabase Project URL</label>
+              <input type="url" id="settings-url" class="auth-input" style="padding-left: 1rem;" required>
+            </div>
+            <div class="auth-group">
+              <label for="settings-key">Supabase Anon Key</label>
+              <input type="text" id="settings-key" class="auth-input" style="padding-left: 1rem;" required>
+            </div>
+            <div style="display: flex; gap: 1rem; padding-top: 0.5rem;">
+              <button type="submit" class="btn-primary" style="flex: 1;">
+                💾 儲存並重新連線
+              </button>
+              <button type="button" class="btn-secondary" id="btn-settings-clear-db" style="flex: 1; justify-content: center; color: #ef4444; border-color: rgba(239, 68, 68, 0.3);">
+                🗑️ 清除連線金鑰
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ==========================================
+       ▼▼▼ 彈出式編輯表單 (Modals) ▼▼▼
+       ========================================== -->
+
+  <!-- Modal 1: 新增/編輯交易流水帳 -->
+  <div class="modal-overlay" id="modal-transaction">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modal-tx-title">新增收支明細</h3>
+        <button class="btn-close modal-close-btn">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <form id="form-transaction">
+        <input type="hidden" id="form-tx-id">
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="control-field">
+              <label for="form-tx-date">日期 *</label>
+              <input type="date" id="form-tx-date" class="control-input" required>
+            </div>
+            <div class="control-field">
+              <label for="form-tx-project">計畫專案 *</label>
+              <select id="form-tx-project" class="control-input" required>
+                <!-- 動態注入計畫 -->
+              </select>
+            </div>
+            <div class="control-field">
+              <label for="form-tx-payee">支領人 (若有特定所得人)</label>
+              <select id="form-tx-payee" class="control-input">
+                <option value="">-- 無特定所得人 --</option>
+                <!-- 動態注入所得人 -->
+              </select>
+            </div>
+            <div class="control-field">
+              <label for="form-tx-subject">社大科目 *</label>
+              <input type="text" id="form-tx-subject" class="control-input" placeholder="例如: 41鐘點費, 講師費" required>
+            </div>
+            <div class="control-field">
+              <label for="form-tx-amount">小計金額 *</label>
+              <input type="number" id="form-tx-amount" class="control-input" placeholder="NT$" min="0" required>
+            </div>
+            <div class="control-field">
+              <label for="form-tx-reason">事由簡述</label>
+              <input type="text" id="form-tx-reason" class="control-input" placeholder="事由說明...">
+            </div>
+            <div class="control-field">
+              <label for="form-tx-voucher">憑單編號</label>
+              <input type="text" id="form-tx-voucher" class="control-input" placeholder="例如: 202601A001">
+            </div>
+            <div class="control-field">
+              <label for="form-tx-receipt">憑證編號</label>
+              <input type="text" id="form-tx-receipt" class="control-input" placeholder="例如: 202601A001 01">
+            </div>
+            <div class="form-group-full">
+              <label>狀態追蹤與申報設定</label>
+              <div class="checkbox-group">
+                <label class="checkbox-label">
+                  <input type="checkbox" id="form-tx-istax">
+                  是否納入扣免繳
+                </label>
+                <label class="checkbox-label">
+                  <input type="checkbox" id="form-tx-gen-receipt">
+                  收據已生成
+                </label>
+                <label class="checkbox-label">
+                  <input type="checkbox" id="form-tx-gen-voucher">
+                  黏貼憑證單已生成
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary modal-close-btn">取消</button>
+          <button type="submit" class="btn-primary">💾 儲存收支紀錄</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 2: 新增/編輯計畫專案 -->
+  <div class="modal-overlay" id="modal-project">
+    <div class="modal" style="max-width: 480px;">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modal-proj-title">新增計畫專案</h3>
+        <button class="btn-close modal-close-btn">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <form id="form-project">
+        <input type="hidden" id="form-proj-id">
+        <div class="modal-body">
+          <div class="form-grid" style="grid-template-columns: 1fr;">
+            <div class="control-field">
+              <label for="form-proj-code">計畫代碼 (唯一值) *</label>
+              <input type="text" id="form-proj-code" class="control-input" placeholder="例如: S2025, PLN-101" required>
+            </div>
+            <div class="control-field">
+              <label for="form-proj-name">計畫名稱 *</label>
+              <input type="text" id="form-proj-name" class="control-input" placeholder="例如: 社區大學多元推廣計畫" required>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary modal-close-btn">取消</button>
+          <button type="submit" class="btn-primary">💾 儲存計畫</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 3: 新增/編輯所得人 -->
+  <div class="modal-overlay" id="modal-payee">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modal-payee-title">新增所得人資料</h3>
+        <button class="btn-close modal-close-btn">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <form id="form-payee">
+        <input type="hidden" id="form-payee-id">
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="control-field">
+              <label for="form-payee-name">真實姓名 *</label>
+              <input type="text" id="form-payee-name" class="control-input" placeholder="姓名 *" required>
+            </div>
+            <div class="control-field">
+              <label for="form-payee-idnum">身分證字號 (唯一值)</label>
+              <input type="text" id="form-payee-idnum" class="control-input" placeholder="身分證字號">
+            </div>
+            <div class="control-field">
+              <label for="form-payee-phone">連絡電話</label>
+              <input type="tel" id="form-payee-phone" class="control-input" placeholder="電話號碼">
+            </div>
+            <div class="control-field">
+              <label for="form-payee-unit">服務單位</label>
+              <input type="text" id="form-payee-unit" class="control-input" placeholder="任職學校或機關">
+            </div>
+            <div class="control-field">
+              <label for="form-payee-title">職稱</label>
+              <input type="text" id="form-payee-title" class="control-input" placeholder="例如: 講師, 專員">
+            </div>
+            <div class="form-group-full">
+              <label for="form-payee-address">戶籍地址 (扣免繳報稅使用)</label>
+              <input type="text" id="form-payee-address" class="control-input" placeholder="完整申報戶籍地址">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary modal-close-btn">取消</button>
+          <button type="submit" class="btn-primary">💾 儲存所得人</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- JavaScript 主載入點 -->
+</body>
+</html>
